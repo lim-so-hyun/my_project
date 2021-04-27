@@ -1,0 +1,100 @@
+# 서울시 시민행복지수 통계
+
+데이터 출처: https://data.seoul.go.kr/dataList/26/S/2/datasetView.do
+데이터 형태: txt
+
+# 분석 project 절차
+
+Step 1. 데이터 찾고 내려받기
+: csv, txt, xlsx 형식의 데이터 위주로 찾음.
+: 웹사이트 주소로 내려받을 수도 있기는 한데 아직 능숙하지 않아서.
+
+Step 2. pandas에서 txt 파일 DataFrame 자료형으로 저장하기
+: csv 파일이 아닌 txt 파일을 열어야 하기 때문에 컬럼 간 데이터가 ','가 아닌 'tab'으로 구분되어있음. 이를 parameter로 설명.
+: encoding 방식은 기본적으로 utf8. EncodingDecodeError 뜨면 그때 맞는 encoding 방식 추가해서 정리해주기
+: header는 없으면 None, 있으면 header로 설정할 row index를 적어주기. 
+: row index로는, 0열을 사용하고 싶으면 index_col = 0 식으로 지정 가능. 
+
+import pandas as pd
+df = pd.read_csv('life style.txt', sep="\t",  index_col = 0, header = 1)
+df
+
+Step 3. 데이터 살펴보고 다듬기
+: 일단 쭉 보니까 원래는 '기간' column이 가장 왼쪽에 있어서 이를 index_col = 0으로 해서 row 이름으로 설정하려고 했음. 
+-> 하지만 이렇게 하기에는 모두 값이 2020으로 동일해서 의미가 없어보여서 그 다음 column을 index로 설정하기로 함. 
+-> 그리고 '기간' column은 필요 없어서 이 column 제외하고 DF 다시 저장.
+: 데이터에 성별, 연령별, 학력별, 소득별, 혼인상태별, 지역대분류, 지역별 기준으로 행복지수를 나타내고 있어서 이를 한번에 분석하기보다는
+각각을 구분해서 새로운 작은 DF으로 저장한 후에 분석하는게 좋을 것 같다는 생각!
+
+import pandas as pd
+df = pd.read_csv('life style.txt', sep="\t",  index_col = 1, header = 1)
+df = df.loc[:,'분류':]
+gender_df1 = df.loc['성별']   # 또는 gender_df2 = df.iloc[1:3]로 직접 index번호로도 슬라이싱 가능
+age_df = df.loc['연령별']
+degree_df = df.loc['학력별']
+income_df = df.loc['소득별']
+marriage_df = df.loc['혼인상태별']
+region_df = df.iloc[27:]  # 지역별 행복지수 DF는 어떤 식으로 인덱싱 해야할지 모르겠어서
+region_df2 = df.loc[df['분류'].str.contains('구')]  # 부분 문자열 포함 인덱스 row 출력하는 함수 찾음. df.str.contains() 사용가능
+region_df2
+
+Step 4. 질문 던지기
+: 오늘은 우선, 성별, 연령별 행복지수를 분석해보기로!
+: 남녀의 행복지수는 행복지수 영역별(자신의 건강상태, 재정상태, 친구관계, 가정생활, 사회생활) 별로 어떻게 다르게 나타날까? 
+-> 남자가 여자보다 높은 행복지수를 보이는 행복지수 영역은?
+: 연령대별로 행복지수는 어떻게 다르게 나타나나?
+-> 영역별로 가장 행복지수가 높은 연령대는 어디일까? 연령대별로 가장 높게 나타나는 행복지수는 각각 무엇일까?
+
+Step 5. 질문의 답 찾기 위한 코드 구상, 구현하기
+: 성별에 따른 행복지수는, 남성이 여성보다 더 높은 행복지수 보이는 영역만 인덱싱하자!
+-> boolean 연산을 활용한 인덱싱인데, 아직 내가 row기준으로 boolean 연산 인덱싱하는 법을 잘 몰라서 column 기준으로 하기 위해, 행, 열 변환해주기
+-> column 명은 남자, 여자로 설정해서 가독성 높이고! 
+-> 행복지수 영역별로 남자 행복지수 - 여자 행복지수 > 0 인 row만 DF로 인덱싱해서 보이자!
+
+import pandas as pd
+import numpy as np
+df = pd.read_csv('life style.txt', sep='\t', index_col = 1, header = 1)
+df = df.loc[:, '분류':]
+gender_df = df.loc['성별']
+# 남자가 여자에 비해 더 높은 행복지수를 갖는 column들만 인덱싱하고 싶은데 두 행 비교하는 방법 모르겠어서 
+# 행, 열 변환해서 column 기준으로 indexing 하고, 남자, 여자로 column 이름 바꿔주자
+new_df = gender_df.transpose()
+new_df.columns = ['남자', '여자']
+new_df = new_df.loc['행복지수 종합':]
+condition =  new_df['남자'] - new_df['여자'] > 0
+new_df.loc[condition]
+
+: 연령대별 행복지수도 같은 방식으로 일단 따로 떼어서 DF로 저장
+-> 여기서는 비교하는 대상이 세개 이상이기 때문에 단순 비교문으로는 적합하지 않을 것. 가장 높은 값에 주목하자
+-> max 값을 찾아서 가장 오른쪽 column으로, 가장 아래 index로 추가해주자!
+-> max와 함께 min도 같은 방식으로 구해서 행, 열로 추가해주자!
+-> 연령대별로 가장 높은 행복지수가 무엇인지 알 수 있고, 행복지수별로는 가장 높은 연령대를 알 수 있을 것
+
+import pandas as pd
+df = pd.read_csv('life style.txt', sep="\t",  index_col = 1, header = 1)
+df = df.loc[:,'분류':]
+age_df = df.loc['연령별']
+x = age_df.transpose()
+x.columns = x.loc['분류']
+x = x.iloc[1:]
+
+# 각 행복지수마다, 연령대 중에서 가장 행복 지수 높은 연령대와, 해당 행복지수를 한눈에 볼 수 있게 하고 싶음
+x['max'] = x.max(axis=1) # 행 축을 따라 최댓값을 찾는 DataFrame.max() 메서드
+x['min'] = x.min(axis=1)
+x.loc['max'] = x.max(axis=0) # 열 축을 따라 최댓값을 찾는 DataFrame.max() 메서드
+x.loc['min'] = x.min(axis=0)
+x
+
+Step 6. 결과 확인하기
+- 모든 행복지수에 대하여 10대가 가장 행복지수가 높고, 40대가 가장 행복지수가 낮다.
+- 모든 연령대에 걸쳐 행복지수는 '자신의 건강상태'에 대해서가 가장 높고, '재정상태'에 대해서가 가장 낮음.
+
+(Step 7. 인사이트 시각화 등의 방식으로 정리하기)
+- 근데 왜... 이렇게 뭔가 통일성있게 나오는거지? 모든 행복지수에 걸쳐서 10대가 가장 높고, 40대가 가장 낮고, 연령대 따라서도 max, min이 다 똑같은게 말이 되나 ㅠㅠ
+
+
+# 한계점
+
+* header가 두줄로 나누어져 설정되어있을 때, 둘중 한줄을 header 로 설정하고 나머지 한 줄은 자료로 포함되어서 자료 애매해짐. 이때, column 이름을 다시 그 첫번째 row 로 설정하는게 번거로웠음. 
+* boolean 연산에 따른 인덱싱을 할 때에, 특정 column을 기준으로 인덱싱하는건 잘 되는데, row를 기준으로 인덱싱하는게 어려워서, 행열을 transpose() 메서드 이용해서 전환한 후에 분석해야 했음. 
+* 아직 loc, iloc 인덱싱,슬라이싱이 row와 column에서 어떻게 차이나는지 완벽하게 숙지 안됨.
