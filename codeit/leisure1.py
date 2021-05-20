@@ -19,3 +19,4 @@ for p in graph.patches:
     left, bottom, width, height = p.get_bbox().bounds
     graph.annotate("%.2f"%(height), xy=(left+width/2, bottom+height/2), ha='center', va='center')
 
+plt.show()
