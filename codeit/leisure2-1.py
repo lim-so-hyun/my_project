@@ -18,3 +18,4 @@ graph = leisure_2019_gender.loc['교제활동':, '남자':].plot(kind='bar', tit
 for p in graph.patches:
     left, bottom, width, height = p.get_bbox().bounds
     graph.annotate("%.2f"%(height), xy=(left+width/2, height+0.01), ha='center', va='center')
+plt.show()
