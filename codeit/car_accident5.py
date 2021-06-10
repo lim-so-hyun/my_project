@@ -31,4 +31,4 @@ final이륜차.plot(kind='scatter', x='부상자수', y='사망자수', s='size'
 plt.title('이륜차 교통사고의 부상자수와 사망자수의 비율')
 plt.colorbar
 
-final이륜차['부상자수'].corr(final이륜차['사망자수'])
+print(final이륜차['부상자수'].corr(final이륜차['사망자수']))
